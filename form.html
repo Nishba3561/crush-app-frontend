@@ -1,90 +1,124 @@
-<script type="module">
-  import { auth } from './firebase-config.js';
-  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Details — Crush Thoughts</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <span style="font-size:2.5rem;">💌</span>
+    <h2>Tell Us About You</h2>
+    <p class="subtitle">We'll reveal what your crush thinks!</p>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDMS-d5nJ8LcIxJrpUU9k0tniF7iyUHnJs",
-    authDomain: "crush-app-3567b.firebaseapp.com",
-    projectId: "crush-app-3567b",
-    storageBucket: "crush-app-3567b.firebasestorage.app",
-    messagingSenderId: "1049760010611",
-    appId: "1:1049760010611:web:2e835a0dafa23455ceb506"
-  };
+    <div class="form-group">
+      <label>Your Name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Priya" />
+    </div>
 
-  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-  const db = getFirestore(app);
+    <div class="form-group">
+      <label>Your Date of Birth</label>
+      <input type="date" id="dobInput" />
+    </div>
 
-  let currentUser = null;
+    <div class="form-group">
+      <label>Your Crush's Name</label>
+      <input type="text" id="crushInput" placeholder="e.g. Rahul" />
+    </div>
 
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      window.location.href = 'login.html';
-    } else {
-      currentUser = user;
-    }
-  });
+    <p style="color:red;display:none;font-size:0.85rem;margin-top:10px;" id="errorMsg"></p>
 
-  document.getElementById('generateBtn').addEventListener('click', async () => {
-    const name = document.getElementById('name').value.trim();
-    const dob = document.getElementById('dob').value;
-    const crushName = document.getElementById('crushName').value.trim();
-    const errorMsg = document.getElementById('errorMsg');
+    <button class="btn btn-primary" onclick="handleGenerate()">
+      Reveal Their Thoughts 💕
+    </button>
+  </div>
 
-    if (!name || !dob || !crushName) {
-      errorMsg.textContent = 'Please fill all fields.';
-      errorMsg.style.display = 'block';
-      return;
-    }
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    errorMsg.style.display = 'none';
-    document.getElementById('generateBtn').textContent = 'Generating... 💭';
-    document.getElementById('generateBtn').disabled = true;
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMS-d5nJ8LcIxJrpUU9k0tniF7iyUHnJs",
+      authDomain: "crush-app-3567b.firebaseapp.com",
+      projectId: "crush-app-3567b",
+      storageBucket: "crush-app-3567b.firebasestorage.app",
+      messagingSenderId: "1049760010611",
+      appId: "1:1049760010611:web:2e835a0dafa23455ceb506"
+    };
 
-    try {
-      // Get result from backend
-      const response = await fetch('https://crush-app-backend.onrender.com/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          dob,
-          crushName,
-          userID: currentUser.uid
-        })
-      });
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-      const data = await response.json();
+    let currentUser = null;
 
-      if (data.success) {
-        // Save to Firestore directly from frontend
-        await setDoc(doc(db, 'results', currentUser.uid), {
-          userID: currentUser.uid,
-          name,
-          dob,
-          crushName,
-          result: data.result,
-          createdAt: new Date().toISOString()
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+      } else {
+        currentUser = user;
+      }
+    });
+
+    window.handleGenerate = async () => {
+      const name = document.getElementById('nameInput').value.trim();
+      const dob = document.getElementById('dobInput').value;
+      const crushName = document.getElementById('crushInput').value.trim();
+      const errorMsg = document.getElementById('errorMsg');
+
+      if (!name || !dob || !crushName) {
+        errorMsg.textContent = 'Please fill all fields.';
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      const btn = document.querySelector('button');
+      btn.textContent = 'Generating... 💭';
+      btn.disabled = true;
+      errorMsg.style.display = 'none';
+
+      try {
+        const response = await fetch('https://crush-app-backend.onrender.com/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            dob,
+            crushName,
+            userID: currentUser.uid
+          })
         });
 
-        // Save in session and redirect
-        sessionStorage.setItem('crushResult', data.result);
-        sessionStorage.setItem('crushName', crushName);
-        window.location.href = 'result.html';
+        const data = await response.json();
 
-      } else {
-        errorMsg.textContent = data.error || 'Something went wrong.';
+        if (data.success) {
+          await setDoc(doc(db, 'results', currentUser.uid), {
+            userID: currentUser.uid,
+            name,
+            dob,
+            crushName,
+            result: data.result,
+            createdAt: new Date().toISOString()
+          });
+
+          sessionStorage.setItem('crushResult', data.result);
+          sessionStorage.setItem('crushName', crushName);
+          window.location.href = 'result.html';
+        } else {
+          errorMsg.textContent = data.error || 'Something went wrong.';
+          errorMsg.style.display = 'block';
+        }
+
+      } catch (err) {
+        errorMsg.textContent = 'Error: ' + err.message;
         errorMsg.style.display = 'block';
       }
 
-    } catch (err) {
-      console.error(err);
-      errorMsg.textContent = 'Error: ' + err.message;
-      errorMsg.style.display = 'block';
-    }
-
-    document.getElementById('generateBtn').textContent = 'Reveal Their Thoughts 💕';
-    document.getElementById('generateBtn').disabled = false;
-  });
-</script>
+      btn.textContent = 'Reveal Their Thoughts 💕';
+      btn.disabled = false;
+    };
+  </script>
+</body>
+</html>
