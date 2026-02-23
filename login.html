@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — Crush Thoughts</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <span style="font-size:2.5rem;">🔐</span>
+    <h2>Welcome Back</h2>
+    <p class="subtitle">Login or create an account to continue</p>
+
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="emailInput" placeholder="you@example.com" />
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="passwordInput" placeholder="Your password" />
+    </div>
+
+    <p style="color:red;display:none;font-size:0.85rem;margin-top:10px;" id="errorMsg"></p>
+
+    <button class="btn btn-primary" onclick="handleLogin()">Login</button>
+    <div class="divider">— or —</div>
+    <button class="btn btn-secondary" onclick="handleSignup()">Create Account</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMS-d5nJ8LcIxJrpUU9k0tniF7iyUHnJs",
+      authDomain: "crush-app-3567b.firebaseapp.com",
+      projectId: "crush-app-3567b",
+      storageBucket: "crush-app-3567b.firebasestorage.app",
+      messagingSenderId: "1049760010611",
+      appId: "1:1049760010611:web:2e835a0dafa23455ceb506"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    function showMsg(msg, isError) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.color = isError ? 'red' : '#e91e8c';
+      el.style.display = 'block';
+    }
+
+    window.handleLogin = async () => {
+      const email = document.getElementById('emailInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      if (!email || !password) return showMsg('Please fill all fields.', true);
+      try {
+        showMsg('Logging in...', false);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const snap = await getDoc(doc(db, 'results', cred.user.uid));
+        window.location.href = snap.exists() ? 'result.html' : 'form.html';
+      } catch (err) {
+        showMsg('Login failed: ' + err.message, true);
+      }
+    };
+
+    window.handleSignup = async () => {
+      const email = document.getElementById('emailInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      if (!email || !password) return showMsg('Please fill all fields.', true);
+      if (password.length < 6) return showMsg('Password must be at least 6 characters.', true);
+      try {
+        showMsg('Creating account...', false);
+        await createUserWithEmailAndPassword(auth, email, password);
+        window.location.href = 'form.html';
+      } catch (err) {
+        showMsg('Signup failed: ' + err.message, true);
+      }
+    };
+  </script>
+</body>
+</html>
